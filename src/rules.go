@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/jhillyerd/go.enmime"
 )
 
 type Rules struct {
@@ -42,6 +44,7 @@ func (r *Rules) IsContainsMalwareDomain(msgId string, connector string) bool {
 
 func (r *Rules) getEmailBody(file string) string {
 	msg, err := ReadEmail(file)
+	mimes, err := enmime.ParseMIMEBody(msg)
 
 	body, err := ioutil.ReadAll(msg.Body)
 
