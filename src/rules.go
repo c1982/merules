@@ -2,9 +2,8 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"io/ioutil"
 	"log"
+	"net/mail"
 	"os"
 	"strings"
 
@@ -14,21 +13,77 @@ import (
 type Rules struct {
 }
 
-func (r *Rules) IsExtensionMaxLenghtBelow(msgId string, connector string) bool {
+func (r *Rules) ApplyRules(messageFile string) {
+
+	e, _ := ReadEmail(messageFile)
+	body, _ := enmime.ParseMIMEBody(e)
+
+	r.clearAttachmentByExtensions(body)
+	r.clearAttachmentBySize(body)
+
+	for i := 0; i < len(body.Attachments); i++ {
+		fileName := body.Attachments[i].FileName()
+		log.Printf("name: %v, content: %v", fileName, string(body.Attachments[i].Content()))
+	}
+
+}
+
+func (r *Rules) clearAttachmentBySize(body *enmime.MIMEBody) {
+
+	reason_msg := []byte(conf.BlockZipKBMsg)
+
+	for i := 0; i < len(body.Attachments); i++ {
+		fileName := body.Attachments[i].FileName()
+
+		if strings.HasSuffix(fileName, ".zip") {
+			body.Attachments[i].SetContentType("text/html")
+			body.Attachments[i].SetContent(reason_msg)
+			body.Attachments[i].SetFileName(fileName + ".cleared")
+		}
+	}
+}
+
+func (r *Rules) clearAttachmentByExtensions(body *enmime.MIMEBody) {
+
+	reason_msg := []byte(conf.BlockExtensionsMsg)
+
+	for i := 0; i < len(body.Attachments); i++ {
+		fileName := body.Attachments[i].FileName()
+
+		if r.hasSuffixBlocked(fileName) {
+			body.Attachments[i].SetContentType("text/html")
+			body.Attachments[i].SetContent(reason_msg)
+			body.Attachments[i].SetFileName(fileName + ".cleared")
+		}
+	}
+}
+
+func (r *Rules) hasSuffixBlocked(name string) bool {
 	result := false
+
+	for i := 0; i < len(conf.BlockExtensions); i++ {
+		if strings.HasSuffix(name, conf.BlockExtensions[i]) {
+			result = true
+			break
+		}
+	}
 
 	return result
 }
 
-func (r *Rules) IsContainsMalwareDomain(msgId string, connector string) bool {
+func (r *Rules) isContainMalwareDomain(messageFile string) bool {
 
 	result := false
 
-	file := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\Messages\\%v", conf.MePath, connector, msgId)
-	//metaFile := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\%v", conf.MePath, connector, msgId)
+	//file := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\Messages\\%v", conf.MePath, connector, msgId)
 
-	bodyTxt := r.getEmailBody(file)
-	blist := r.getBlackList()
+	bodyTxt, err := ReadEmailBody(messageFile)
+
+	if err != nil {
+		return result
+	}
+
+	blist := r.getBlackListDomainsFromConfig()
 
 	for i := 0; i < len(blist); i++ {
 
@@ -42,20 +97,7 @@ func (r *Rules) IsContainsMalwareDomain(msgId string, connector string) bool {
 	return result
 }
 
-func (r *Rules) getEmailBody(file string) string {
-	msg, err := ReadEmail(file)
-	mimes, err := enmime.ParseMIMEBody(msg)
-
-	body, err := ioutil.ReadAll(msg.Body)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return fmt.Sprintf("%s", body)
-}
-
-func (r *Rules) getBlackList() []string {
+func (r *Rules) getBlackListDomainsFromConfig() []string {
 
 	var lines []string
 

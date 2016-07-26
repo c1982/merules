@@ -11,10 +11,13 @@ import (
 var conf meConfig
 
 type meConfig struct {
-	MinSize         int      `toml:"MinBlockSize"`
-	MinExtensions   []string `toml:"MinBlockExtensions"`
-	BlockExtensions []string `toml:"BlockedAttachments"`
-	MePath          string   `toml:"MailEnablePath"`
+	BlockZipKB           int      `toml:"BlockZipKB"`
+	BlockZipKBMsg        string   `toml:"BlockZipKB_Msg"`
+	BlockZipEncrypted    bool     `toml:"BlockZipEncrypted"`
+	BlockZipEncryptedMsg string   `toml:"BlockZipEncrypted_Msg"`
+	BlockExtensions      []string `toml:"BlockExtensions"`
+	BlockExtensionsMsg   string   `toml:"BlockExtensions_Msg"`
+	MePath               string   `toml:"MailEnablePath"`
 }
 
 func init() {
