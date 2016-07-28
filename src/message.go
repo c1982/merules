@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/mail"
+
+	"github.com/alexmullins/zip"
 )
 
 func ReadEmail(file string) (*mail.Message, error) {
@@ -24,4 +26,11 @@ func ReadEmailBody(file string) (string, error) {
 	}
 
 	return fmt.Sprintf("%s", body), err
+}
+
+func isPasswordProtected(file string) bool {
+	isen, _ := zip.OpenReader(file)
+	defer isen.Close()
+
+	return isen.File[0].IsEncrypted()
 }

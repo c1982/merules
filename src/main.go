@@ -11,13 +11,12 @@ import (
 var conf meConfig
 
 type meConfig struct {
-	BlockZipKB           int      `toml:"BlockZipKB"`
-	BlockZipKBMsg        string   `toml:"BlockZipKB_Msg"`
-	BlockZipEncrypted    bool     `toml:"BlockZipEncrypted"`
-	BlockZipEncryptedMsg string   `toml:"BlockZipEncrypted_Msg"`
-	BlockExtensions      []string `toml:"BlockExtensions"`
-	BlockExtensionsMsg   string   `toml:"BlockExtensions_Msg"`
-	MePath               string   `toml:"MailEnablePath"`
+	MaxScanSizeKB      int      `toml:"MaxScanSizeKB"`
+	BlockPassZip       bool     `toml:"BlockZipEncrypted"`
+	BlockPassZipMsg    string   `toml:"BlockPassZip_Msg"`
+	BlockExtensions    []string `toml:"BlockExtensions"`
+	BlockExtensionsMsg string   `toml:"BlockExtensions_Msg"`
+	MePath             string   `toml:"MailEnablePath"`
 }
 
 func init() {
