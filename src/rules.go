@@ -15,6 +15,7 @@ import (
 )
 
 type Rules struct {
+	config meConfig
 }
 
 func (r *Rules) ApplyRules(messageFile string) {
@@ -51,7 +52,7 @@ func (r *Rules) ApplyRules(messageFile string) {
 
 func (r *Rules) hasPasswordProtectionZipFile(body *enmime.MIMEBody) (bool, string) {
 	result := false
-	resultMsg := conf.BlockPassZipMsg
+	resultMsg := r.config.BlockPassZipMsg
 
 	if len(body.Attachments) == 0 {
 		log.Println("Attachment not found.")
@@ -60,14 +61,14 @@ func (r *Rules) hasPasswordProtectionZipFile(body *enmime.MIMEBody) (bool, strin
 
 	for i := 0; i < len(body.Attachments); i++ {
 		fileName := body.Attachments[i].FileName()
-		size := binary.Size(body.Attachments[i].Content()) / 1024
+		size := getSizebyKB(body.Attachments[i].Content())
 
-		if size <= conf.MaxScanSizeKB {
+		if size <= r.config.MaxScanSizeKB {
 			if strings.HasSuffix(fileName, ".zip") {
 				content := body.Attachments[i].Content()
 				result = r.isPasswordProtected(fileName, content)
 				log.Println("%v is encrypted", fileName)
-				resultMsg = strings.Replace(resultMsg, "%1", fmt.Sprintf(" %v is encrypted like malware.", fileName), 0)
+				resultMsg = strings.Replace(resultMsg, "%1", fileName, -1)
 				if result {
 					break
 				}
@@ -81,7 +82,7 @@ func (r *Rules) hasPasswordProtectionZipFile(body *enmime.MIMEBody) (bool, strin
 func (r *Rules) hasBlockedExtensions(body *enmime.MIMEBody) (bool, string) {
 
 	result := false
-	resultMsg := conf.BlockExtensionsMsg
+	resultMsg := r.config.BlockExtensionsMsg
 
 	if len(body.Attachments) == 0 {
 		log.Println("Attachment extensions not found.")
@@ -92,10 +93,11 @@ func (r *Rules) hasBlockedExtensions(body *enmime.MIMEBody) (bool, string) {
 		fileName := body.Attachments[i].FileName()
 		size := binary.Size(body.Attachments[i].Content()) / 1024
 
-		if size <= conf.MaxScanSizeKB {
-			if result = r.hasSuffixBlocked(fileName); result {
-				log.Println("File extension blocked: %s", fileName)
-				resultMsg = strings.Replace(resultMsg, "%1", fmt.Sprintf("Blocked extension: %v.", fileName), 0)
+		if size <= r.config.MaxScanSizeKB {
+			result = r.hasSuffixBlocked(fileName)
+			if result {
+				log.Printf("File extension blocked: %s", fileName)
+				resultMsg = strings.Replace(resultMsg, "%1", fileName, -1)
 				break
 			}
 		}
@@ -107,8 +109,8 @@ func (r *Rules) hasBlockedExtensions(body *enmime.MIMEBody) (bool, string) {
 func (r *Rules) hasSuffixBlocked(name string) bool {
 	result := false
 
-	for i := 0; i < len(conf.BlockExtensions); i++ {
-		if strings.HasSuffix(name, conf.BlockExtensions[i]) {
+	for i := 0; i < len(r.config.BlockExtensions); i++ {
+		if strings.HasSuffix(name, r.config.BlockExtensions[i]) {
 			result = true
 			break
 		}
@@ -120,11 +122,11 @@ func (r *Rules) hasSuffixBlocked(name string) bool {
 func (r *Rules) containsMalwareDomain(body *enmime.MIMEBody) (bool, string) {
 
 	result := false
-	resultMsg := conf.ScanMalwareDomainMsg
+	resultMsg := r.config.ScanMalwareDomainMsg
 
 	blist := r.getBlackListDomainsFromConfig()
 
-	if !conf.ScanMalwareDomain {
+	if !r.config.ScanMalwareDomain {
 		log.Println("Malware scan disabled.")
 		return result, resultMsg
 	}
@@ -133,11 +135,30 @@ func (r *Rules) containsMalwareDomain(body *enmime.MIMEBody) (bool, string) {
 		log.Println("Black list domains not found.")
 		return result, resultMsg
 	}
-	for i := 0; i < len(blist); i++ {
-		result = strings.ContainsAny(body.HTML, blist[i])
+
+	if result, resultMsg = r.isContainsBody(body.HTML, blist); result {
+		log.Println("Malware found in HTML part: ", resultMsg)
+		return result, resultMsg
+	}
+
+	result, resultMsg = r.isContainsBody(body.Text, blist)
+
+	if result {
+		log.Println("Malware found in TEXT part: ", resultMsg)
+	}
+
+	return result, resultMsg
+}
+
+func (r *Rules) isContainsBody(body string, blacklist []string) (bool, string) {
+	result := false
+	resultMsg := r.config.ScanMalwareDomainMsg
+
+	for i := 0; i < len(blacklist); i++ {
+		result = strings.Contains(body, blacklist[i])
 		if result {
-			log.Println("Contains malware domain in email body: %s", blist[i])
-			resultMsg = strings.Replace(resultMsg, "%1", blist[i], 0)
+			log.Println("Contains malware domain in email body:", blacklist[i])
+			resultMsg = strings.Replace(resultMsg, "%1", blacklist[i], -1)
 			break
 		}
 	}
@@ -154,6 +175,7 @@ func (r *Rules) getBlackListDomainsFromConfig() []string {
 	if err != nil {
 		return lines
 	}
+
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
@@ -165,7 +187,7 @@ func (r *Rules) getBlackListDomainsFromConfig() []string {
 }
 
 func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
-	tmpFolder := fmt.Sprintf("%v\\.tmp", conf.MePath)
+	tmpFolder := fmt.Sprintf("%v\\.tmp", r.config.MePath)
 
 	if isFolderExists(tmpFolder) {
 		err := createFolder(tmpFolder)

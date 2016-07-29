@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -90,4 +91,8 @@ func isFolderExists(path string) bool {
 
 func createFolder(path string) error {
 	return os.Mkdir(path, 0644)
+}
+
+func getSizebyKB(content []byte) int {
+	return binary.Size(content) / 1024
 }
