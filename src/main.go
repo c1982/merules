@@ -11,12 +11,14 @@ import (
 var conf meConfig
 
 type meConfig struct {
-	MaxScanSizeKB      int      `toml:"MaxScanSizeKB"`
-	BlockPassZip       bool     `toml:"BlockZipEncrypted"`
-	BlockPassZipMsg    string   `toml:"BlockPassZip_Msg"`
-	BlockExtensions    []string `toml:"BlockExtensions"`
-	BlockExtensionsMsg string   `toml:"BlockExtensions_Msg"`
-	MePath             string   `toml:"MailEnablePath"`
+	MaxScanSizeKB        int      `toml:"MaxScanSizeKB"`
+	BlockPassZip         bool     `toml:"BlockZipEncrypted"`
+	BlockPassZipMsg      string   `toml:"BlockPassZip_Msg"`
+	BlockExtensions      []string `toml:"BlockExtensions"`
+	BlockExtensionsMsg   string   `toml:"BlockExtensions_Msg"`
+	ScanMalwareDomain    bool     `toml:"ScanMalwareDomain"`
+	ScanMalwareDomainMsg string   `toml:"ScanMalwareDomain_Msg"`
+	MePath               string   `toml:"MailEnablePath"`
 }
 
 func init() {
