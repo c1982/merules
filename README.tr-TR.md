@@ -120,4 +120,5 @@ Konfigürasyon dosyasında BlockPassZip alanından yönetilir.  Cryptolocker vir
 ## İletişim
 
 Oğuzhan YILMAZ
+
 aspsrc@gmail.com
