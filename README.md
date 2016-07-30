@@ -112,10 +112,10 @@ Konfigürasyon dosyasında BlockPassZip alanından yönetilir.  Cryptolocker vir
 
 ## Paketler
 
-* github.com/jhillyerd/go.enmime
-* github.com/alexmullins/zip
-* github.com/mohamedattahri/mail
-* github.com/BurntSushi/toml
+* [github.com/jhillyerd/go.enmime](https://github.com/jhillyerd/go.enmime)
+* [github.com/alexmullins/zip](https://github.com/alexmullins/zip)
+* [github.com/mohamedattahri/mail](https://github.com/mohamedattahri/mail)
+* [github.com/BurntSushi/toml](https://github.com/BurntSushi/toml)
 
 ## İletişim
 
