@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"testing"
 
@@ -22,14 +23,17 @@ func init() {
 	confTest.BlockExtensionsMsg = "Blocked extensions: %1"
 	confTest.ScanMalwareDomain = true
 	confTest.ScanMalwareDomainMsg = "Is malware: %1"
+	confTest.MePath = "O:\\Projects\\Go\\src\\merules\\mai"
 
 	testRules = Rules{}
 	testRules.config = confTest
-
 }
 
 var meessageFile = "O:\\Projects\\Go\\src\\merules\\mai\\1CF842E1C83B4267838199F7B5ACB0FF.MAI"
 var meessageFile2 = "O:\\Projects\\Go\\src\\merules\\mai\\4AB300013D4B476E815B012A432383D6.MAI"
+var meessageFile3 = "O:\\Projects\\Go\\src\\merules\\mai\\81204A08530B4C98A48C20ABA2DB80F7.MAI"
+var meessageFile4 = "O:\\Projects\\Go\\src\\merules\\mai\\A8A79EED30B849D5B1767E863261BCD2.MAI"
+var zipAttachment = "O:\\Projects\\Go\\src\\merules\\mai\\encrypted.zip"
 
 func Test_hasSuffixBlocked(t *testing.T) {
 
@@ -121,4 +125,71 @@ func Test_hasBlockedExtensions_XLS(t *testing.T) {
 	if msg != "Blocked extensions: Haftalik_Yapilacaklar_Listesi.xls" {
 		t.Error("Invalid return message")
 	}
+}
+
+func Test_hasPasswordProtectionZipFile(t *testing.T) {
+
+	e, err := ReadEmail(meessageFile3)
+
+	if err != nil {
+		t.Fatal("Read Error: ", err)
+	}
+
+	body, err := enmime.ParseMIMEBody(e)
+
+	if err != nil {
+		log.Fatal("Perse MIME Error: ", err)
+	}
+
+	isIt, msg := testRules.hasPasswordProtectionZipFile(body)
+
+	if !isIt {
+		t.Error("Encrypted zip attachment not found.")
+	}
+
+	if msg != "Blocked zip: encrypted.zip" {
+		t.Error("Invalid return message")
+	}
+
+}
+
+func Test_isPasswordProtected(t *testing.T) {
+
+	yes, err := isPasswordProtected(zipAttachment)
+
+	if err != nil {
+		log.Fatal("Zip file read error:", err)
+	}
+
+	if !yes {
+		t.Error("Zip is password protected but not determine this stupid function.")
+	}
+}
+
+func Test_newPlainTextMsg(t *testing.T) {
+
+	e, err := ReadEmail(meessageFile4)
+
+	if err != nil {
+		t.Fatal("Read Error: ", err)
+	}
+
+	newMessageFile := fmt.Sprintf("%s.new", meessageFile4)
+	t.Log(newMessageFile)
+
+	testRules.newPlainTextMsg(newMessageFile, e, "body message")
+
+}
+
+func Test_PrintEmail(t *testing.T) {
+
+	e, err := ReadEmail(meessageFile4)
+
+	if err != nil {
+		t.Fatal("Read Error: ", err)
+	}
+
+	emailText := PrintEmail(e, "This email cleared")
+
+	log.Println("Mail:", emailText)
 }

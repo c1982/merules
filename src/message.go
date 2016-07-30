@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net/mail"
 	"os"
 
 	"github.com/alexmullins/zip"
+	mo "github.com/mohamedattahri/mail"
 )
 
 func ReadEmail(file string) (*mail.Message, error) {
@@ -45,6 +47,37 @@ func ReadEmailBody(file string) (string, error) {
 	}
 
 	return fmt.Sprintf("%s", body), err
+}
+
+func PrintEmail(m *mail.Message, body string) string {
+
+	msg := mo.NewMessage()
+
+	for key, values := range m.Header {
+		for idx, _ := range values {
+
+			if key == "Content-Type" {
+				msg.SetHeader(key, "text/plain")
+			} else {
+				msg.SetHeader(key, decodeRFC2047(values[idx]))
+			}
+		}
+	}
+
+	body = fmt.Sprintf("%s %s", body, conf.EmailFooter)
+	fmt.Fprintf(msg.Body, body)
+
+	return fmt.Sprint(msg)
+}
+
+func decodeRFC2047(s string) string {
+
+	// GO 1.5 does not decode headers, but this may change in future releases...
+	decoded, err := (&mime.WordDecoder{}).DecodeHeader(s)
+	if err != nil || len(decoded) == 0 {
+		return s
+	}
+	return decoded
 }
 
 func isPasswordProtected(file string) (bool, error) {

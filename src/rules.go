@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/jhillyerd/go.enmime"
-	mo "github.com/mohamedattahri/mail"
 )
 
 type Rules struct {
@@ -67,7 +66,7 @@ func (r *Rules) hasPasswordProtectionZipFile(body *enmime.MIMEBody) (bool, strin
 			if strings.HasSuffix(fileName, ".zip") {
 				content := body.Attachments[i].Content()
 				result = r.isPasswordProtected(fileName, content)
-				log.Println("%v is encrypted", fileName)
+				log.Println("File encrypted:", fileName)
 				resultMsg = strings.Replace(resultMsg, "%1", fileName, -1)
 				if result {
 					break
@@ -189,12 +188,15 @@ func (r *Rules) getBlackListDomainsFromConfig() []string {
 func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
 	tmpFolder := fmt.Sprintf("%v\\.tmp", r.config.MePath)
 
-	if isFolderExists(tmpFolder) {
+	if !isFolderExists(tmpFolder) {
+		log.Println("Folder not found:", tmpFolder)
 		err := createFolder(tmpFolder)
 		if err != nil {
 			log.Println("Folder cannot created. ", tmpFolder, err)
 			panic(err)
 		}
+
+		log.Println("Folder created:", tmpFolder)
 	}
 
 	tmpfile := fmt.Sprintf("%v\\%v", tmpFolder, fileName)
@@ -206,6 +208,8 @@ func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
 		panic(err)
 	}
 
+	log.Println("File saved:", tmpfile)
+
 	result, err := isPasswordProtected(tmpfile)
 
 	if err != nil {
@@ -213,6 +217,7 @@ func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
 	}
 
 	deleteFile(tmpfile)
+	log.Println("File deleted:", tmpfile)
 
 	return result
 }
@@ -222,19 +227,9 @@ func (r *Rules) saveAttachmentFile(fileName string, content []byte) error {
 }
 
 func (r *Rules) newPlainTextMsg(messageFile string, m *mail.Message, message string) {
-	msg := mo.NewMessage()
-	msg.SetHeader("Received", m.Header.Get("Received"))
-	msg.SetHeader("From", m.Header.Get("From"))
-	msg.SetHeader("References", m.Header.Get("References"))
-	msg.SetHeader("Date", m.Header.Get("Date"))
-	msg.SetMessageID(m.Header.Get("Message-ID"))
-	msg.SetInReplyTo(m.Header.Get("In-Reply-To"))
-	msg.SetSubject(m.Header.Get("Subject"))
-	msg.SetContentType("text/plain")
+	content := PrintEmail(m, message)
 
-	content := []byte(fmt.Sprint(msg))
-
-	err := ioutil.WriteFile(messageFile, content, 0644)
+	err := ioutil.WriteFile(messageFile, []byte(content), 0644)
 
 	if err != nil {
 		panic(err)

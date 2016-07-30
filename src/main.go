@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -18,6 +17,7 @@ type meConfig struct {
 	BlockExtensionsMsg   string   `toml:"BlockExtensions_Msg"`
 	ScanMalwareDomain    bool     `toml:"ScanMalwareDomain"`
 	ScanMalwareDomainMsg string   `toml:"ScanMalwareDomain_Msg"`
+	EmailFooter          string   `toml:"EmailFooter"`
 	MePath               string   `toml:"MailEnablePath"`
 }
 
@@ -34,13 +34,18 @@ func init() {
 func main() {
 
 	if len(os.Args) < 2 {
-		fmt.Println("MaestroPanel MTA Filter")
+		fmt.Println("MailEnable MTA Pickup Event by MaestroPanel")
+		fmt.Println("https://github.com/c1982/merules - aspsrc@gmail.com")
 		return
 	}
 
 	MessageID := os.Args[1]
 	ConnectorCode := os.Args[2]
 
-	log.Println("Message ID:", MessageID, "Connector:", ConnectorCode)
+	messageFile := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\Messages\\%v", conf.MePath, ConnectorCode, MessageID)
+
+	var r = Rules{}
+	r.config = conf
+	r.ApplyRules(messageFile)
 
 }
