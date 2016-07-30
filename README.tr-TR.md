@@ -1,4 +1,5 @@
 # merules - MTA Pickup Event for MailEnable
+
 Bu araç MailEnable SMTP servisine gelen (Inbound) epostaları belirli kurallar çerçevesinde kontrol eder, kurallara aykırı olan epostaların içeriği temizlenir ve kullanıcıya neden bu epostayı alamadığına dair bilgi geçilir.
 
 ## Download
@@ -18,14 +19,11 @@ dizinine kopyalayın.
 - Servers > Services and Connectors > MTA 
 
 
-menüsüne sağ tıklayarak **Properties** ekranına ulaşın. 
+menüsüne sağ tıklayarak **Properties** ekranına ulaşın.  **Enable Pickup event** kutusunu işaretleyip, **Program to execute on mail file**: alanına merules.exe dosyasını tanıtın.
 
-**Enable Pickup event** kutusunu işaretleyip.
+Daha kolay bir yol ise, aşağıdaki Registry kaytını merules.reg olarak
+sunucu üzerine kaydedin ve çalıştırın.
 
-**Program to execute on mail file**: alanına merules.exe dosyasını tanıtın.
-
-> Daha kolay bir yol ise, aşağıdaki Registry kaytını merules.reg olarak
-> sunucu üzerine kaydedin ve çalıştırın.
 > 
 > merulles.reg
 > 
@@ -58,30 +56,39 @@ MailEnablePath="C:\\Program Files (x86)\\Mail Enable"
 **Konfigürasyon Dosyası Açıklamaları**
 
 MaxScanSizeKB
+
 Dikkate alınacak eposta eklerinin (Attachment) maksimum boyutunu belirler. KB cinsinden girilen değeri geçen ekler dikkate alınmaz. Varsayılan değer 140KB'dır. 140KB'ı geçen dosya ekleri dikkate alınmaz.
 
 BlockPassZip
+
 Zip dosyalarının parola korumalı (Encrypted Zip) olup olmadığını kontrol edilmesini sağlar.
 
 BlockPassZip_Msg 
+
 Parola korumalı Zip bulunduğunda kullanıcıya iletilecek mesajı belirler.
 
 BlockExtensions
+
 Eposta eklerini yasaklar. Değeri [] olarak girildiğinde dikkate alınmaz.
 
 BlockExtensions_Msg 
+
 Eposta ekleri yasaklandığında kullanıcıya iletilecek mesajı belirler.
 
 ScanMalwareDomain
+
 Eposta içeriğinde yasaklı domainlerin aranmasını sağlar.
 
 ScanMalwareDomain_Msg
+
 Yasaklı domain bulunduğunda kullanıcıya iletilecek mesajı belirler.
 
 EmailFooter
+
 Kullanıcıya iletilecek mesajların altında imza satırını belirler.
 
 MailEnablePath
+
 Sunucu üzerinde MailEnable yazılımının hangi dizinde çalıştığını belirler.
 
 ## Uyguladığı Kurallar
@@ -103,6 +110,14 @@ Konfigürasyon dosyasında *ScanMalwareDomain* alanından yönetilebilir. blackl
 
 Konfigürasyon dosyasında BlockPassZip alanından yönetilir.  Cryptolocker virüsleri genelde Encrypted zip dosyaları ile yayılırlar (yada benim karşılaştığım o yönde). Araç, epostanın zip içerikli eklerini kontrol eder ve zip dosyası encrypted ise epostanın içeriğine uygun mesajı yazarak alıcısına iletir.
 
+## Paketler
+
+* github.com/jhillyerd/go.enmime
+* github.com/alexmullins/zip
+* github.com/mohamedattahri/mail
+* github.com/BurntSushi/toml
+
 ## İletişim
+
 Oğuzhan YILMAZ
 aspsrc@gmail.com
