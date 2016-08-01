@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -20,6 +21,11 @@ type meConfig struct {
 	ScanMalwareDomainMsg string   `toml:"ScanMalwareDomain_Msg"`
 	EmailFooter          string   `toml:"EmailFooter"`
 	MePath               string   `toml:"MailEnablePath"`
+	InboundScan          bool     `toml:"InboundScan"`
+	OutboundScan         bool     `toml:"OutboundScan"`
+	DeleteDetectedMail   bool     `toml:"DeleteDetectedMail"`
+	SendNDRMsg           bool     `toml:"SendNDRMsg"`
+	SendCleanedMsg       bool     `toml:"SendCleanedMsg"`
 }
 
 func init() {
@@ -46,6 +52,22 @@ func main() {
 
 	MessageID := os.Args[1]
 	ConnectorCode := os.Args[2]
+
+	//Inbound
+	if ConnectorCode == "SMTP" {
+		if !conf.InboundScan {
+			log.Println("Ignored SMTP Inbound Scan. InboundScan=false. Code:", ConnectorCode)
+			return
+		}
+	}
+
+	//Outbound
+	if ConnectorCode == "LS" || ConnectorCode == "SF" {
+		if !conf.OutboundScan {
+			log.Println("Ignored LS or SF Outbound Scan. OutboundScan=false. Code:", ConnectorCode)
+			return
+		}
+	}
 
 	messageFile := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\Messages\\%v", conf.MePath, ConnectorCode, MessageID)
 
