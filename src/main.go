@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 )
@@ -23,12 +24,16 @@ type meConfig struct {
 
 func init() {
 
-	if _, err := toml.DecodeFile("./merules.config", &conf); err != nil {
+	configDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	configFile := fmt.Sprintf("%v\\merules.config", configDir)
+
+	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
 		if err != nil {
 			fmt.Println("Failed to parse toml data: ", err)
 			os.Exit(1)
 		}
 	}
+
 }
 
 func main() {
