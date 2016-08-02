@@ -34,18 +34,32 @@ func (r *Rules) ApplyRules(messageFile string) {
 	}
 
 	if isIt, msg := r.hasBlockedExtensions(body); isIt {
-		r.newPlainTextMsg(messageFile, e, msg)
+		r.applyInternalRules(e, messageFile, msg)
 		return
 	}
 
 	if isIt, msg := r.containsMalwareDomain(body); isIt {
-		r.newPlainTextMsg(messageFile, e, msg)
+		r.applyInternalRules(e, messageFile, msg)
 		return
 	}
 
 	if isIt, msg := r.hasPasswordProtectionZipFile(body); isIt {
-		r.newPlainTextMsg(messageFile, e, msg)
+		r.applyInternalRules(e, messageFile, msg)
 		return
+	}
+}
+
+func (r *Rules) applyInternalRules(e *mail.Message, messageFile string, msg string) {
+	if r.config.SendNDRMsg {
+
+	}
+
+	if r.config.SendCleanedMsg {
+		r.sendMessageToRecipient(e, messageFile, msg)
+	}
+
+	if r.config.DeleteDetectedMail {
+
 	}
 }
 
@@ -226,7 +240,7 @@ func (r *Rules) saveAttachmentFile(fileName string, content []byte) error {
 	return ioutil.WriteFile(fileName, content, 0644)
 }
 
-func (r *Rules) newPlainTextMsg(messageFile string, m *mail.Message, message string) {
+func (r *Rules) sendMessageToRecipient(m *mail.Message, messageFile string, message string) {
 	content := PrintEmail(m, message)
 
 	err := ioutil.WriteFile(messageFile, []byte(content), 0644)
