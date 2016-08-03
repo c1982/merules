@@ -24,8 +24,10 @@ type meConfig struct {
 	InboundScan          bool     `toml:"InboundScan"`
 	OutboundScan         bool     `toml:"OutboundScan"`
 	DeleteDetectedMail   bool     `toml:"DeleteDetectedMail"`
-	SendNDRMsg           bool     `toml:"SendNDRMsg"`
-	SendCleanedMsg       bool     `toml:"SendCleanedMsg"`
+	ScanServices         []string `toml:"ScanServices"`
+	SendReportRecipient  bool     `toml:"SendReportRecipient"`
+	SendReportSender     bool     `toml:"SendReportSender"`
+	SenderEmail          string   `toml:"SenderEmail"`
 }
 
 func init() {
@@ -53,26 +55,23 @@ func main() {
 	MessageID := os.Args[1]
 	ConnectorCode := os.Args[2]
 
-	//Inbound
-	if ConnectorCode == "SMTP" {
-		if !conf.InboundScan {
-			log.Println("Ignored SMTP Inbound Scan. InboundScan=false. Code:", ConnectorCode)
-			return
-		}
+	if !isPermittedService(ConnectorCode) {
+		log.Println("Not permitted for scan:", ConnectorCode)
+		return
 	}
 
-	//Outbound
-	if ConnectorCode == "LS" || ConnectorCode == "SF" {
-		if !conf.OutboundScan {
-			log.Println("Ignored LS or SF Outbound Scan. OutboundScan=false. Code:", ConnectorCode)
-			return
-		}
-	}
-
-	messageFile := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\Messages\\%v", conf.MePath, ConnectorCode, MessageID)
+	inboundMessage := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\Messages\\%v", conf.MePath, ConnectorCode, MessageID)
+	outboundMessage := fmt.Sprintf("%v\\Queues\\%v\\Outgoing\\Messages\\%v", conf.MePath, ConnectorCode, MessageID)
 
 	var r = Rules{}
 	r.config = conf
-	r.ApplyRules(messageFile)
+
+	if conf.InboundScan {
+		r.ApplyRules(inboundMessage)
+	}
+
+	if conf.OutboundScan {
+		r.ApplyRules(outboundMessage)
+	}
 
 }

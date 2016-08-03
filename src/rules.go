@@ -19,6 +19,11 @@ type Rules struct {
 
 func (r *Rules) ApplyRules(messageFile string) {
 
+	if !isFileExists(messageFile) {
+		log.Println("file not found:", messageFile)
+		return
+	}
+
 	e, err := ReadEmail(messageFile)
 
 	if err != nil {
@@ -50,16 +55,18 @@ func (r *Rules) ApplyRules(messageFile string) {
 }
 
 func (r *Rules) applyInternalRules(e *mail.Message, messageFile string, msg string) {
-	if r.config.SendNDRMsg {
 
+	if r.config.DeleteDetectedMail {
+		deleteFile(messageFile)
+		return
 	}
 
-	if r.config.SendCleanedMsg {
+	if r.config.SendReportRecipient {
 		r.sendMessageToRecipient(e, messageFile, msg)
 	}
 
-	if r.config.DeleteDetectedMail {
-
+	if r.config.SendReportSender {
+		InjectEmailToOutgoing(e, messageFile, msg)
 	}
 }
 
@@ -241,7 +248,7 @@ func (r *Rules) saveAttachmentFile(fileName string, content []byte) error {
 }
 
 func (r *Rules) sendMessageToRecipient(m *mail.Message, messageFile string, message string) {
-	content := PrintEmail(m, message)
+	content := ChangeEmailBodyToMessage(m, message)
 
 	err := ioutil.WriteFile(messageFile, []byte(content), 0644)
 
