@@ -27,6 +27,7 @@ type meConfig struct {
 	SendReportRecipient  bool     `toml:"SendReportRecipient"`
 	SendReportSender     bool     `toml:"SendReportSender"`
 	SenderEmail          string   `toml:"SenderEmail"`
+	EnableWhiteList      bool     `toml:"EnableWhiteList"`
 }
 
 func init() {
