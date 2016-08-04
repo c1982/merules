@@ -44,13 +44,18 @@ Varsayılan _merules.config_
 ```toml
 MaxScanSizeKB=140
 BlockPassZip=true
-BlockPassZip_Msg = "Email is cleaned!\nZip files cannot be encrypted like ramsonware: %1"
+BlockPassZip_Msg = "Email is cleaned!\nZip files cannot be encrypted like ramsonware: %1\n\nSubject: %2"
 BlockExtensions=["exe","msi","bat"]
-BlockExtensions_Msg = "Email is cleaned!\nThis mail has contains blocked attachment. Detected file is: %1"
+BlockExtensions_Msg = "Email is cleaned!\nThis mail has contains blocked attachment. Detected file is: %1\n\nSubject: %2"
 ScanMalwareDomain=true
-ScanMalwareDomain_Msg="Email is cleaned!\nMalware domain detected in email body: %1"
+ScanMalwareDomain_Msg="Email is cleaned!\nMalware domain detected in email body: %1\n\nSubject: %2"
 EmailFooter="\n\n--\nYour mail changed by mail server - merules v1.0"
 MailEnablePath="C:\\Program Files (x86)\\Mail Enable"
+ScanServices =["SMTP","LS","SF","POP"]
+DeleteDetectedMail=false
+SendReportRecipient=false
+SendReportSender=true
+SenderEmail="postmaster@domain.com"
 ```
 
 **Konfigürasyon Dosyası Açıklamaları**
@@ -65,7 +70,7 @@ Zip dosyalarının parola korumalı (Encrypted Zip) olup olmadığını kontrol 
 
 BlockPassZip_Msg 
 
-Parola korumalı Zip bulunduğunda kullanıcıya iletilecek mesajı belirler.
+Parola korumalı Zip bulunduğunda kullanıcıya iletilecek mesajı belirler. %1 dosyanın ismi, %2 epostanın konusu.
 
 BlockExtensions
 
@@ -73,7 +78,7 @@ Eposta eklerini yasaklar. Değeri [] olarak girildiğinde dikkate alınmaz.
 
 BlockExtensions_Msg 
 
-Eposta ekleri yasaklandığında kullanıcıya iletilecek mesajı belirler.
+Eposta ekleri yasaklandığında kullanıcıya iletilecek mesajı belirler. %1 dosyanın ismi, %2 epostanın konusu.
 
 ScanMalwareDomain
 
@@ -81,7 +86,7 @@ Eposta içeriğinde yasaklı domainlerin aranmasını sağlar.
 
 ScanMalwareDomain_Msg
 
-Yasaklı domain bulunduğunda kullanıcıya iletilecek mesajı belirler.
+Yasaklı domain bulunduğunda kullanıcıya iletilecek mesajı belirler. %1 domain'in ismi, %2 epostanın konusu.
 
 EmailFooter
 
@@ -90,6 +95,26 @@ Kullanıcıya iletilecek mesajların altında imza satırını belirler.
 MailEnablePath
 
 Sunucu üzerinde MailEnable yazılımının hangi dizinde çalıştığını belirler.
+
+ScanServices
+
+MailEnable servislerinden hangisinin dikkate alınacağını belirler. SMTP dışarıya giden epostaları, SF içeriden dolaşan epostaları, LS liste özelliğinde kullanılan epostaları tarar. Sadece gelenleri taramak için SMTP. Giden ve Gelen epostaları taramak için ise SMTP, SF eğerlerini girmelisiniz.
+
+DeleteDetectedMail
+
+Taranan ve kuralların yakaladığı zararlı epostayı anında siler ve herhangi bir rapor göndermez.
+
+SendReportRecipient
+
+Epostada zararlı yakalandığı zaman alıcıya "Received Failure" raporu gönderir. NDR raporuda denir.
+
+SendReportSender
+
+Epostada zararlı yakalandığı zaman gönderene "Delivery Failure" raporu gönderir. NDR raporuda denir.
+
+SenderEmail
+
+Eposta raporu gönderilirken hangi eposta üzerinden gönderileceğini belirtebilirsiniz. Sunucuda var olan bir eposta adresi belirtmelisiniz.
 
 ## Uyguladığı Kurallar
 
@@ -110,6 +135,10 @@ Konfigürasyon dosyasında *ScanMalwareDomain* alanından yönetilebilir. blackl
 
 Konfigürasyon dosyasında BlockPassZip alanından yönetilir.  Cryptolocker virüsleri genelde Encrypted zip dosyaları ile yayılırlar (yada benim karşılaştığım o yönde). Araç, epostanın zip içerikli eklerini kontrol eder ve zip dosyası encrypted ise epostanın içeriğine uygun mesajı yazarak alıcısına iletir.
 
+## Debug
+
+MailEnable MTA Debug için [https://www.mailenable.com/kb/content/article.asp?ID=ME020121](https://www.mailenable.com/kb/content/article.asp?ID=ME020121) adresini ziyaret ediniz.
+
 ## Paketler
 
 * [github.com/jhillyerd/go.enmime](https://github.com/jhillyerd/go.enmime)
@@ -121,4 +150,4 @@ Konfigürasyon dosyasında BlockPassZip alanından yönetilir.  Cryptolocker vir
 
 Oğuzhan YILMAZ
 
-aspsrc@gmail.com
+aspsrc@gmail.com 
