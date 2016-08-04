@@ -50,6 +50,22 @@ func ReadEmailBody(file string) (string, error) {
 	return fmt.Sprintf("%s", body), err
 }
 
+func ReadEmailHeaders(e *mail.Message) string {
+
+	var b bytes.Buffer
+
+	b.WriteString("\r\n\r\n\r\nDiagnostic information for administrators:\r\n\r\n")
+
+	for key, values := range e.Header {
+		for idx, _ := range values {
+
+			b.WriteString(fmt.Sprintf("%s=%s\r\n", key, decodeRFC2047(values[idx])))
+		}
+	}
+
+	return b.String()
+}
+
 func ChangeEmailBodyToMessage(m *mail.Message, body string) string {
 
 	msg := mo.NewMessage()
@@ -65,39 +81,89 @@ func ChangeEmailBodyToMessage(m *mail.Message, body string) string {
 		}
 	}
 
-	body = fmt.Sprintf("%s %s", body, conf.EmailFooter)
+	msg.SetSubject("Received Failure")
+
+	debugInfo := ReadEmailHeaders(m)
+
+	body = fmt.Sprintf("%s %s %s", body, debugInfo, conf.EmailFooter)
 	fmt.Fprintf(msg.Body, body)
 
 	return fmt.Sprint(msg)
 }
 
-func InjectEmailToOutgoing(e *mail.Message, messageFile string, msg string) {
+func InjectEmailToOutgoing(e *mail.Message, messageFile string, msg string) error {
 
-	to := e.Header.Get("From")
 	sender := conf.SenderEmail
 	messageId := getFileNameOfPath(messageFile)
 
-	command := createCommandFileContent(to, sender, messageId)
+	commandContent := createCommandFileContent(e, sender, messageId)
+	mailContent := createNDRContent(e, messageFile, msg)
 
+	outgoingCommand := fmt.Sprintf("%v\\Queues\\SMTP\\Outgoing\\%v", conf.MePath, messageId)
+	outgoingMessage := fmt.Sprintf("%v\\Queues\\SMTP\\Outgoing\\Messages\\%v", conf.MePath, messageId)
+
+	err := saveFile(outgoingCommand, []byte(commandContent))
+
+	if err != nil {
+		return err
+	}
+
+	err = saveFile(outgoingMessage, []byte(mailContent))
+
+	return err
 }
 
-func createCommandFileContent(to string, sender string, messageId string) string {
+func createNDRContent(e *mail.Message, messageFile string, msg string) string {
 
-	toDomain := strings.Split(to, "@")[1]
+	to, err := mo.ParseAddress(e.Header.Get("From"))
+
+	if err != nil {
+		log.Println("From cannot be parsed", err)
+		return ""
+	}
+
+	messageId := decodeRFC2047(e.Header.Get("Message-ID"))
+
+	m := mo.NewMessage()
+	m.SetFrom(&mo.Address{"Postmaster", conf.SenderEmail})
+	m.SetContentType("text/plain")
+	m.SetMessageID(messageId)
+	m.SetSubject("Delivery Failure")
+	m.To().Add(to)
+
+	debugInfo := ReadEmailHeaders(e)
+
+	body := fmt.Sprintf("%s %s %s", msg, debugInfo, conf.EmailFooter)
+
+	fmt.Fprintf(m.Body, body)
+
+	return m.String()
+}
+
+func createCommandFileContent(e *mail.Message, sender string, messageId string) string {
+
+	to, err := mo.ParseAddress(e.Header.Get("From"))
+
+	if err != nil {
+		log.Println("From cannot be parsed", err)
+		return ""
+	}
+
+	toDomain := strings.Split(to.Address, "@")[1]
 	senderDomain := strings.Split(sender, "@")[1]
 
 	var b bytes.Buffer
 
-	b.WriteString(fmt.Sprintln("DomainName=%s", toDomain))
-	b.WriteString(fmt.Sprintln("CommandType=NDR"))
-	b.WriteString(fmt.Sprintln("Recipients=[SMTP:%s]", to))
-	b.WriteString(fmt.Sprintln("Sender=[SMTP:%s]", sender))
-	b.WriteString(fmt.Sprintln("Retries=0"))
-	b.WriteString(fmt.Sprintln("MessageID=%s", messageId))
-	b.WriteString(fmt.Sprintln("User=%s", sender))
-	b.WriteString(fmt.Sprintln("Account=%s", senderDomain))
-	b.WriteString(fmt.Sprintln("Priority=Normal"))
-	b.WriteString(fmt.Sprintln("Status=Unsent"))
+	b.WriteString(fmt.Sprintf("DomainName=%s\r\n", toDomain))
+	b.WriteString("CommandType=NDR\r\n")
+	b.WriteString(fmt.Sprintf("Recipients=[SMTP:%s]\r\n", to.Address))
+	b.WriteString(fmt.Sprintf("Sender=[SMTP:%s]\r\n", sender))
+	b.WriteString("Retries=0\r\n")
+	b.WriteString(fmt.Sprintf("MessageID=%s\r\n", messageId))
+	b.WriteString(fmt.Sprintf("User=%s\r\n", sender))
+	b.WriteString(fmt.Sprintf("Account=%s\r\n", senderDomain))
+	b.WriteString("Priority=Normal\r\n")
+	b.WriteString("Status=Unsent\r\n")
 
 	return b.String()
 }
@@ -156,11 +222,11 @@ func isExistsItem(path string, checkdir bool) bool {
 	return true
 }
 
-func isPermittedService(service string) bool {
+func isPermittedService(services []string, service string) bool {
 
 	result := false
 
-	for _, v := range conf.ScanServices {
+	for _, v := range services {
 		if v == service {
 			result = true
 			break
@@ -172,10 +238,10 @@ func isPermittedService(service string) bool {
 
 func deleteFile(path string) {
 
-	err := os.Remove("deleteme.file")
+	err := os.Remove(path)
 
 	if err != nil {
-		log.Println("File cannot be deleted:", path)
+		log.Println("File cannot be deleted:", path, err)
 		return
 	}
 
@@ -193,4 +259,12 @@ func getSizebyKB(content []byte) int {
 func getFileNameOfPath(path string) string {
 	i := strings.LastIndex(path, "\\")
 	return path[i+1:]
+}
+
+func saveFile(fileName string, content []byte) error {
+	return ioutil.WriteFile(fileName, content, 0644)
+}
+
+func formatDomain(name string) string {
+	return strings.Replace(name, ".", "_", -1)
 }

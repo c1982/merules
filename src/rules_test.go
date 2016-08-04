@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"testing"
 
@@ -24,6 +23,11 @@ func init() {
 	confTest.ScanMalwareDomain = true
 	confTest.ScanMalwareDomainMsg = "Is malware: %1"
 	confTest.MePath = "O:\\Projects\\Go\\src\\merules\\mai"
+	confTest.DeleteDetectedMail = false
+	confTest.SenderEmail = "aspsrc@gmail.com"
+	confTest.SendReportSender = false
+	confTest.SendReportRecipient = false
+	confTest.ScanServices = []string{"SMTP", "SF"}
 
 	testRules = Rules{}
 	testRules.config = confTest
@@ -166,21 +170,6 @@ func Test_isPasswordProtected(t *testing.T) {
 	}
 }
 
-func Test_newPlainTextMsg(t *testing.T) {
-
-	e, err := ReadEmail(meessageFile4)
-
-	if err != nil {
-		t.Fatal("Read Error: ", err)
-	}
-
-	newMessageFile := fmt.Sprintf("%s.new", meessageFile4)
-	t.Log(newMessageFile)
-
-	testRules.newPlainTextMsg(newMessageFile, e, "body message")
-
-}
-
 func Test_PrintEmail(t *testing.T) {
 
 	e, err := ReadEmail(meessageFile4)
@@ -189,7 +178,32 @@ func Test_PrintEmail(t *testing.T) {
 		t.Fatal("Read Error: ", err)
 	}
 
-	emailText := PrintEmail(e, "This email cleared")
+	emailText := ChangeEmailBodyToMessage(e, "This email cleared")
 
 	log.Println("Mail:", emailText)
+}
+
+func Test_GetFileNameFromPath(t *testing.T) {
+
+	fileName := getFileNameOfPath(meessageFile)
+
+	if fileName != "1CF842E1C83B4267838199F7B5ACB0FF.MAI" {
+		t.Error("Filename not determine", fileName)
+	}
+}
+
+func Test_IsPermittedService(t *testing.T) {
+
+	result := isPermittedService(confTest.ScanServices, "SMTP")
+
+	if !result {
+		t.Error("Not contains SMTP service in Permitted Services")
+	}
+
+	result = isPermittedService(confTest.ScanServices, "KAKA")
+
+	if result {
+		t.Error("Wrong behaviour IsPermittedService")
+	}
+
 }

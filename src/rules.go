@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/mail"
 	"os"
@@ -56,6 +55,9 @@ func (r *Rules) ApplyRules(messageFile string) {
 
 func (r *Rules) applyInternalRules(e *mail.Message, messageFile string, msg string) {
 
+	subject := decodeRFC2047(e.Header.Get("Subject"))
+	msg = strings.Replace(msg, "%2", subject, -1)
+
 	if r.config.DeleteDetectedMail {
 		deleteFile(messageFile)
 		return
@@ -66,7 +68,10 @@ func (r *Rules) applyInternalRules(e *mail.Message, messageFile string, msg stri
 	}
 
 	if r.config.SendReportSender {
-		InjectEmailToOutgoing(e, messageFile, msg)
+		err := InjectEmailToOutgoing(e, messageFile, msg)
+		if err != nil {
+			log.Println("Sender report cannot be send:", err)
+		}
 	}
 }
 
@@ -75,7 +80,7 @@ func (r *Rules) hasPasswordProtectionZipFile(body *enmime.MIMEBody) (bool, strin
 	resultMsg := r.config.BlockPassZipMsg
 
 	if len(body.Attachments) == 0 {
-		log.Println("Attachment not found.")
+		log.Println("Cannot detect password protection zip.")
 		return result, resultMsg
 	}
 
@@ -87,7 +92,7 @@ func (r *Rules) hasPasswordProtectionZipFile(body *enmime.MIMEBody) (bool, strin
 			if strings.HasSuffix(fileName, ".zip") {
 				content := body.Attachments[i].Content()
 				result = r.isPasswordProtected(fileName, content)
-				log.Println("File encrypted:", fileName)
+				log.Println("File is protected with password:", fileName)
 				resultMsg = strings.Replace(resultMsg, "%1", fileName, -1)
 				if result {
 					break
@@ -103,9 +108,8 @@ func (r *Rules) hasBlockedExtensions(body *enmime.MIMEBody) (bool, string) {
 
 	result := false
 	resultMsg := r.config.BlockExtensionsMsg
-
 	if len(body.Attachments) == 0 {
-		log.Println("Attachment extensions not found.")
+		log.Println("Email does not have a attachment.")
 		return result, resultMsg
 	}
 
@@ -116,7 +120,7 @@ func (r *Rules) hasBlockedExtensions(body *enmime.MIMEBody) (bool, string) {
 		if size <= r.config.MaxScanSizeKB {
 			result = r.hasSuffixBlocked(fileName)
 			if result {
-				log.Printf("File extension blocked: %s", fileName)
+				log.Println("Attachment blocked:", fileName)
 				resultMsg = strings.Replace(resultMsg, "%1", fileName, -1)
 				break
 			}
@@ -152,21 +156,21 @@ func (r *Rules) containsMalwareDomain(body *enmime.MIMEBody) (bool, string) {
 	}
 
 	if len(blist) == 0 {
-		log.Println("Black list domains not found.")
+		log.Println("Black list domain not found.")
 		return result, resultMsg
 	}
 
 	if result, resultMsg = r.isContainsBody(body.HTML, blist); result {
-		log.Println("Malware found in HTML part: ", resultMsg)
 		return result, resultMsg
 	}
 
 	result, resultMsg = r.isContainsBody(body.Text, blist)
 
 	if result {
-		log.Println("Malware found in TEXT part: ", resultMsg)
+		return result, resultMsg
 	}
 
+	log.Println("Malware domain not found.")
 	return result, resultMsg
 }
 
@@ -178,7 +182,7 @@ func (r *Rules) isContainsBody(body string, blacklist []string) (bool, string) {
 		result = strings.Contains(body, blacklist[i])
 		if result {
 			log.Println("Contains malware domain in email body:", blacklist[i])
-			resultMsg = strings.Replace(resultMsg, "%1", blacklist[i], -1)
+			resultMsg = strings.Replace(resultMsg, "%1", formatDomain(blacklist[i]), -1)
 			break
 		}
 	}
@@ -189,10 +193,11 @@ func (r *Rules) isContainsBody(body string, blacklist []string) (bool, string) {
 func (r *Rules) getBlackListDomainsFromConfig() []string {
 
 	var lines []string
-
-	file, err := os.Open(".\\blacklist.config")
+	blacklistFile := fmt.Sprintf("%s\\blacklist.config", currentPath)
+	file, err := os.Open(blacklistFile)
 
 	if err != nil {
+		log.Println("Blacklist config cannot be opened:", err)
 		return lines
 	}
 
@@ -212,8 +217,9 @@ func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
 	if !isFolderExists(tmpFolder) {
 		log.Println("Folder not found:", tmpFolder)
 		err := createFolder(tmpFolder)
+
 		if err != nil {
-			log.Println("Folder cannot created. ", tmpFolder, err)
+			log.Println("Folder cannot be created. ", tmpFolder, err)
 			panic(err)
 		}
 
@@ -222,10 +228,10 @@ func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
 
 	tmpfile := fmt.Sprintf("%v\\%v", tmpFolder, fileName)
 
-	err := r.saveAttachmentFile(tmpfile, content)
+	err := saveFile(tmpfile, content)
 
 	if err != nil {
-		log.Println()
+		log.Println(err)
 		panic(err)
 	}
 
@@ -237,20 +243,20 @@ func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
 		panic(err)
 	}
 
+	if result {
+		log.Println("Yes file is password protected.")
+	}
+
 	deleteFile(tmpfile)
 	log.Println("File deleted:", tmpfile)
 
 	return result
 }
 
-func (r *Rules) saveAttachmentFile(fileName string, content []byte) error {
-	return ioutil.WriteFile(fileName, content, 0644)
-}
-
 func (r *Rules) sendMessageToRecipient(m *mail.Message, messageFile string, message string) {
 	content := ChangeEmailBodyToMessage(m, message)
 
-	err := ioutil.WriteFile(messageFile, []byte(content), 0644)
+	err := saveFile(messageFile, []byte(content))
 
 	if err != nil {
 		panic(err)

@@ -10,6 +10,7 @@ import (
 )
 
 var conf meConfig
+var currentPath string
 
 type meConfig struct {
 	MaxScanSizeKB        int      `toml:"MaxScanSizeKB"`
@@ -21,8 +22,6 @@ type meConfig struct {
 	ScanMalwareDomainMsg string   `toml:"ScanMalwareDomain_Msg"`
 	EmailFooter          string   `toml:"EmailFooter"`
 	MePath               string   `toml:"MailEnablePath"`
-	InboundScan          bool     `toml:"InboundScan"`
-	OutboundScan         bool     `toml:"OutboundScan"`
 	DeleteDetectedMail   bool     `toml:"DeleteDetectedMail"`
 	ScanServices         []string `toml:"ScanServices"`
 	SendReportRecipient  bool     `toml:"SendReportRecipient"`
@@ -32,8 +31,9 @@ type meConfig struct {
 
 func init() {
 
-	configDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	configFile := fmt.Sprintf("%v\\merules.config", configDir)
+	currentPath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+
+	configFile := fmt.Sprintf("%v\\merules.config", currentPath)
 
 	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
 		if err != nil {
@@ -55,23 +55,15 @@ func main() {
 	MessageID := os.Args[1]
 	ConnectorCode := os.Args[2]
 
-	if !isPermittedService(ConnectorCode) {
+	if !isPermittedService(conf.ScanServices, ConnectorCode) {
 		log.Println("Not permitted for scan:", ConnectorCode)
 		return
 	}
 
 	inboundMessage := fmt.Sprintf("%v\\Queues\\%v\\Inbound\\Messages\\%v", conf.MePath, ConnectorCode, MessageID)
-	outboundMessage := fmt.Sprintf("%v\\Queues\\%v\\Outgoing\\Messages\\%v", conf.MePath, ConnectorCode, MessageID)
 
 	var r = Rules{}
 	r.config = conf
-
-	if conf.InboundScan {
-		r.ApplyRules(inboundMessage)
-	}
-
-	if conf.OutboundScan {
-		r.ApplyRules(outboundMessage)
-	}
+	r.ApplyRules(inboundMessage)
 
 }
