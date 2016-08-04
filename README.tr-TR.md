@@ -116,6 +116,10 @@ SenderEmail
 
 Eposta raporu gönderilirken hangi eposta üzerinden gönderileceğini belirtebilirsiniz. Sunucuda var olan bir eposta adresi belirtmelisiniz.
 
+EnableWhiteList
+
+Gelen email adresinin domain'ini belirledikten sonra whitelist.config içindeki domainlerle karşılaştırır. Eşetiği taktirde mevcut kurallar uygulanmaz.
+
 ## Uyguladığı Kurallar
 
 Bu araç ön tanımlı kurallar çevçevesinde hareket eder. Bu kurallar sırası ile şöyledir.
