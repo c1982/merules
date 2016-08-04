@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -267,4 +268,36 @@ func saveFile(fileName string, content []byte) error {
 
 func formatDomain(name string) string {
 	return strings.Replace(name, ".", "_", -1)
+}
+
+func ReadAllLines(fileName string) []string {
+	var lines []string
+
+	file, err := os.Open(fileName)
+
+	if err != nil {
+		log.Println("File not found:", err)
+		return lines
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	return lines
+}
+
+func GetBlackListDomains() []string {
+	blacklistFile := fmt.Sprintf("%s\\blacklist.config", currentPath)
+
+	return ReadAllLines(blacklistFile)
+}
+
+func GetWhiteListDomains() []string {
+	whiteListFile := fmt.Sprintf("%s\\whitelist.config", currentPath)
+
+	return ReadAllLines(whiteListFile)
 }

@@ -1,15 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"encoding/binary"
 	"fmt"
 	"log"
 	"net/mail"
-	"os"
 	"strings"
 
 	"github.com/jhillyerd/go.enmime"
+	mo "github.com/mohamedattahri/mail"
 )
 
 type Rules struct {
@@ -28,6 +27,10 @@ func (r *Rules) ApplyRules(messageFile string) {
 	if err != nil {
 		log.Println("Read Error: ", err)
 		panic(err)
+	}
+
+	if r.isSenderInWhiteList(e) {
+		return
 	}
 
 	body, err := enmime.ParseMIMEBody(e)
@@ -148,7 +151,7 @@ func (r *Rules) containsMalwareDomain(body *enmime.MIMEBody) (bool, string) {
 	result := false
 	resultMsg := r.config.ScanMalwareDomainMsg
 
-	blist := r.getBlackListDomainsFromConfig()
+	blist := GetBlackListDomains()
 
 	if !r.config.ScanMalwareDomain {
 		log.Println("Malware scan disabled.")
@@ -188,27 +191,6 @@ func (r *Rules) isContainsBody(body string, blacklist []string) (bool, string) {
 	}
 
 	return result, resultMsg
-}
-
-func (r *Rules) getBlackListDomainsFromConfig() []string {
-
-	var lines []string
-	blacklistFile := fmt.Sprintf("%s\\blacklist.config", currentPath)
-	file, err := os.Open(blacklistFile)
-
-	if err != nil {
-		log.Println("Blacklist config cannot be opened:", err)
-		return lines
-	}
-
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	return lines
 }
 
 func (r *Rules) isPasswordProtected(fileName string, content []byte) bool {
@@ -261,4 +243,32 @@ func (r *Rules) sendMessageToRecipient(m *mail.Message, messageFile string, mess
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (r *Rules) isSenderInWhiteList(m *mail.Message) bool {
+	result := false
+	var list = GetWhiteListDomains()
+
+	if len(list) == 0 {
+		return result
+	}
+
+	from, err := mo.ParseAddress(m.Header.Get("From"))
+
+	if err != nil {
+		log.Println("From header cannot parse:", err)
+	}
+
+	fromDomain := strings.Split(from.Address, "@")[1]
+
+	for i := 0; i < len(list); i++ {
+		if fromDomain == list[i] {
+			result = true
+			log.Println("Sender in white list:", fromDomain)
+			break
+		}
+	}
+
+	return result
+
 }
